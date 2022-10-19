@@ -7,7 +7,7 @@ interface Payload {
 interface PayloadArray extends Array<(Payload | null)>{}
 
 interface Mission {
-  id: string, name: string, payloads: PayloadArray, payload_total?: number
+  id: string, name: string, payloads: PayloadArray, payload_total?: number, nationalities?: Set<string>
 }
 
 interface MissionArray extends Array<Mission>{}
@@ -20,6 +20,7 @@ let truncate = (s: string) => s.length < 12 ? s : s.substring(0,12)+"...";
 
 interface PayloadTableProps {
   missions: MissionArray
+  filterBy: {key: string, value: string}
 }
 
 interface PayloadTableState {
@@ -74,7 +75,7 @@ class PayloadTable extends React.Component<PayloadTableProps, PayloadTableState>
   };
 
   sortIcon = (columnName: string) => {
-    // TODO use real icons
+    // TODO use real icons; see https://heroicons.com/
     if (columnName !== this.state.sortBy) return;
     switch(this.state.sortDir) {
       case "asc":
@@ -86,9 +87,17 @@ class PayloadTable extends React.Component<PayloadTableProps, PayloadTableState>
     }
   }
 
+  filterMissions = (missions: MissionArray) => {
+    if (this.props.filterBy.key === "nationality" && this.props.filterBy.value !== "All Nations") {
+     return missions.filter((mission) => mission.nationalities?.has(this.props.filterBy.value))
+    }
+    return missions;
+  }
+
   render() {
     console.log(this.state)
     let { missions } = this.props;
+    if(this.props.filterBy) {missions = this.filterMissions(missions)}
     // make a copy of the array with spread syntax so it goes back to original order when not sorted
     missions = this.state.sortDir ? [...missions].sort(this.sortCompare): missions;
     return (<table>
@@ -105,18 +114,51 @@ class PayloadTable extends React.Component<PayloadTableProps, PayloadTableState>
   };
 };
 
-const PayloadCard: React.FC<PayloadCardProps> = (props: PayloadCardProps) => {
-  let getPayloadTotal = (mission: Mission): number => {
-    return mission.payloads.reduce((total, payload) => {
-      // TODO Create a set of unique nationality values for filtering
+interface PayloadCardState {
+  filterBy: {key: string, value: string}
+  all_nationalities: Set<string>
+}
+
+class PayloadCard extends React.Component<PayloadCardProps> {
+  state: PayloadCardState = {
+    filterBy: {key: "nationality", value: "All Nations"},
+    all_nationalities: new Set(["All Nations"])
+  };
+
+  getPayloadData = (mission: Mission): {payload_total: number, mission_nationalities: Set<string>} => {
+    const mission_nationalities = new Set<string>();
+    const payload_total = mission.payloads.reduce((total, payload) => {
       if (payload == null) return total;
+      mission_nationalities.add(payload.nationality);
+      this.state.all_nationalities.add(payload.nationality);
       return total + (payload.payload_mass_kg == null ? 0 : payload.payload_mass_kg);
     }, 0);
+    return {payload_total, mission_nationalities};
   };
-  let { missions }  = props.data;
-  missions.forEach((mission) => {mission.payload_total = getPayloadTotal(mission)});
-  // TODO create separate components for donutchart, table, filter, and put them all together here
-  return (<><PayloadTable missions={missions}/></>);
+
+  changeFilterBy(filterByKey: string, event: React.ChangeEvent<HTMLSelectElement>) {
+    this.setState(Object.assign({...this.state}, {filterBy: {key: filterByKey, value: event.target.value}}));
+  }
+  
+  render() {
+    let { missions }  = this.props.data;
+    missions.forEach((mission) => {
+      let {payload_total, mission_nationalities} = this.getPayloadData(mission);
+      mission.payload_total = payload_total;
+      mission.nationalities = mission_nationalities;
+    });
+  return (
+      <>
+        <h3>Total Payload Per Mission</h3>
+        <select onChange={(e) => this.changeFilterBy("nationality", e)}>
+          {Array.from(this.state.all_nationalities).map((v) => 
+            <option value={v} key={v}>{v}</option>
+          )}
+        </select>
+        <PayloadTable missions={missions} filterBy={this.state.filterBy}/>
+      </>
+    )
+  }
 };
 
 export default PayloadCard;
