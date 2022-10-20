@@ -19,7 +19,8 @@ export interface PayloadCardProps {
 let truncate = (s: string) => s.length < 12 ? s : s.substring(0,10)+" ...";
 
 interface PayloadTableProps {
-  missions: MissionArray
+  missions: MissionArray,
+  colorArray: string[]
 }
 
 interface PayloadTableState {
@@ -50,9 +51,15 @@ class PayloadTable extends React.Component<PayloadTableProps, PayloadTableState>
     })
   };
 
-  missionRow = (mission: Mission) => (
+  missionRow = (mission: Mission, color: string) => (
     <tr key={mission.id+"_row"}>
-      <td key={mission.id+"_name"}>{truncate(mission.name)}</td>
+      <td key={mission.id+"_name"}>
+        <svg width="10px" height="10px" viewBox="0 0 10 10">
+          <circle className="legendColorCircle"
+          cx="5" cy="5" r="1.591549430918954"
+          fill={color} stroke={color} strokeWidth="3"/>
+        </svg>
+        {truncate(mission.name)}</td>
       <td key={mission.id+"_payload"}>{mission.payload_total} KG</td>
     </tr>
   );
@@ -101,7 +108,7 @@ class PayloadTable extends React.Component<PayloadTableProps, PayloadTableState>
         </tr>
       </thead>
       <tbody>
-        {missions.map((mission) => this.missionRow(mission))}
+        {missions.map((mission, i) => this.missionRow(mission, this.props.colorArray[i]))}
       </tbody>
     </table>);
   };
@@ -109,11 +116,11 @@ class PayloadTable extends React.Component<PayloadTableProps, PayloadTableState>
 
 interface DonutChartProps {
   data: {label: string, value: number}[]
+  colorArray: string[]
 }
 
 const DonutChart: React.FC<DonutChartProps> = (props: DonutChartProps) => {
   // TODO Tooltip
-  const colors = ['#f44336', '#e91e63', '#9c27b0', '#673ab7', '#3f51b5', '#2196f3', '#03a9f4', '#00bcd4', '#009688', '#4caf50', '#8bc34a', '#cddc39', '#ffeb3b', '#ffc107', '#ff9800', '#ff5722', '#795548', '#607d8b' ];
   const segements = (data: {label: string, value: number}[]) => {
     let offset = 0;
     return data.map((d, i) => {
@@ -121,7 +128,7 @@ const DonutChart: React.FC<DonutChartProps> = (props: DonutChartProps) => {
       let segment = (
         <circle className="donut-segment" key={d.label}
         cx="50" cy="50" r="15.91549430918954"
-        fill="transparent" stroke={colors[i]} strokeWidth="3"
+        fill="transparent" stroke={props.colorArray[i]} strokeWidth="3"
         strokeDasharray={strokeDasharray} strokeDashoffset={`${100-offset}`}/>
       )
       offset = offset + d.value
@@ -180,6 +187,7 @@ class PayloadCard extends React.Component<PayloadCardProps> {
   }
 
   render() {
+    const colors = ['#f44336', '#e91e63', '#9c27b0', '#673ab7', '#3f51b5', '#2196f3', '#03a9f4', '#00bcd4', '#009688', '#4caf50', '#8bc34a', '#cddc39', '#ffeb3b', '#ffc107', '#ff9800', '#ff5722', '#795548', '#607d8b' ];
     let { missions }  = this.props.data
     if(this.state.filterBy) {missions = this.filterMissions(missions)}
     let all_missions_total_payload_kg = 0;
@@ -200,8 +208,8 @@ class PayloadCard extends React.Component<PayloadCardProps> {
             <option value={v} key={v}>{v}</option>
           )}
         </select>
-        <DonutChart data={donutChartData}/>
-        <PayloadTable missions={missions}/>
+        <DonutChart data={donutChartData} colorArray={colors}/>
+        <PayloadTable missions={missions} colorArray={colors}/>
       </div>
     )
   }
