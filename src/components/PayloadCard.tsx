@@ -1,4 +1,5 @@
 import React from 'react';
+import ReactTooltip from 'react-tooltip';
 
 interface Payload {
   id: string; payload_mass_kg: (number | null); nationality: string
@@ -60,10 +61,11 @@ class PayloadTable extends React.Component<PayloadTableProps, PayloadTableState>
 
   missionRow = (mission: Mission, color: string) => (
     <tr key={mission.id+"_row"}>
-      <td key={mission.id+"_name"}>
+      <td key={mission.id+"_name"} data-tip data-for={mission.id+"_name"}>
         {legendColorCircle(color)}
         {truncate(mission.name)}</td>
       <td key={mission.id+"_payload"}>{mission.payload_total} KG</td>
+      <ReactTooltip id={mission.id+"_name"}><span>test</span></ReactTooltip>
     </tr>
   );
 
@@ -129,10 +131,12 @@ const DonutChart: React.FC<DonutChartProps> = (props: DonutChartProps) => {
     return data.map((d, i) => {
       let strokeDasharray = `${d.percentage} ${100-d.percentage}`
       let segment = (
-        <circle className="donut-segment" key={d.label}
-        cx="50" cy="50" r="15.91549430918954"
-        fill="transparent" stroke={props.colorArray[i]} strokeWidth="3"
-        strokeDasharray={strokeDasharray} strokeDashoffset={`${100-offset}`}/>
+          <circle className="donut-segment" key={d.label}
+          data-tip data-for={d.label}          
+          cx="50" cy="50" r="15.91549430918954"
+          fill="transparent" stroke={props.colorArray[i]} strokeWidth="1"
+          strokeDasharray={strokeDasharray} strokeDashoffset={`${100-offset}`}
+          />
       )
       offset = offset + d.percentage
       return segment;
@@ -140,10 +144,21 @@ const DonutChart: React.FC<DonutChartProps> = (props: DonutChartProps) => {
     );
   }
 
+  const segmentTooltip = (d: {label: string, value: number, percentage: number}, color: string) => {
+    return <ReactTooltip id={d.label}>
+      <span>
+        {legendColorCircle(color)}
+        {`${d.label} ${d.value} KG`}
+      </span>
+    </ReactTooltip>
+  }
+
   return <>
     <svg width="75%" height="75%" viewBox="0 0 100 100" className="donut">
       {segements(props.data)}
     </svg>
+    {/* Tooltip for each segment must be mounted outside svg tag */}
+    {props.data.map((d, i) => segmentTooltip(d, props.colorArray[i]))}
   </>;
 };
 
