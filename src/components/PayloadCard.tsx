@@ -20,7 +20,6 @@ let truncate = (s: string) => s.length < 12 ? s : s.substring(0,10)+" ...";
 
 interface PayloadTableProps {
   missions: MissionArray
-  filterBy: {key: string, value: string}
 }
 
 interface PayloadTableState {
@@ -90,17 +89,8 @@ class PayloadTable extends React.Component<PayloadTableProps, PayloadTableState>
     }
   }
 
-  filterMissions = (missions: MissionArray) => {
-    if (this.props.filterBy.key === "nationality" && this.props.filterBy.value !== "All Nations") {
-     return missions.filter((mission) => mission.nationalities?.has(this.props.filterBy.value))
-    }
-    return missions;
-  }
-
   render() {
-    console.log(this.state)
     let { missions } = this.props;
-    if(this.props.filterBy) {missions = this.filterMissions(missions)}
     // make a copy of the array with spread syntax so it goes back to original order when not sorted
     missions = this.state.sortDir ? [...missions].sort(this.sortCompare): missions;
     return (<table>
@@ -115,6 +105,36 @@ class PayloadTable extends React.Component<PayloadTableProps, PayloadTableState>
       </tbody>
     </table>);
   };
+};
+
+interface DonutChartProps {
+  data: {label: string, value: number}[]
+}
+
+const DonutChart: React.FC<DonutChartProps> = (props: DonutChartProps) => {
+  // TODO Tooltip
+  const colors = ['#f44336', '#e91e63', '#9c27b0', '#673ab7', '#3f51b5', '#2196f3', '#03a9f4', '#00bcd4', '#009688', '#4caf50', '#8bc34a', '#cddc39', '#ffeb3b', '#ffc107', '#ff9800', '#ff5722', '#795548', '#607d8b' ];
+  const segements = (data: {label: string, value: number}[]) => {
+    let offset = 0;
+    return data.map((d, i) => {
+      let strokeDasharray = `${d.value} ${100-d.value}`
+      let segment = (
+        <circle className="donut-segment" key={d.label}
+        cx="50" cy="50" r="15.91549430918954"
+        fill="transparent" stroke={colors[i]} strokeWidth="3"
+        strokeDasharray={strokeDasharray} strokeDashoffset={`${100-offset}`}/>
+      )
+      offset = offset + d.value
+      return segment;
+    }
+    );
+  }
+
+  return <>
+    <svg width="75%" height="75%" viewBox="0 0 100 100" className="donut">
+      {segements(props.data)}
+    </svg>
+  </>;
 };
 
 interface PayloadCardState {
@@ -139,27 +159,50 @@ class PayloadCard extends React.Component<PayloadCardProps> {
     return {payload_total, mission_nationalities};
   };
 
+  filterMissions = (missions: MissionArray) => {
+    if (this.state.filterBy.key === "nationality" && this.state.filterBy.value !== "All Nations") {
+     return missions.filter((mission) => mission.nationalities?.has(this.state.filterBy.value))
+    }
+    return missions;
+  }
+
   changeFilterBy(filterByKey: string, event: React.ChangeEvent<HTMLSelectElement>) {
     this.setState(Object.assign({...this.state}, {filterBy: {key: filterByKey, value: event.target.value}}));
   }
   
+  donutChartData = (missions: MissionArray, all_missions_total_payload_kg: number) => {
+    return missions.map((mission) => {
+      return {
+        label: mission.name,
+        value: (mission.payload_total || 0)/all_missions_total_payload_kg*100
+      }
+    });
+  }
+
   render() {
-    let { missions }  = this.props.data;
+    let { missions }  = this.props.data
+    if(this.state.filterBy) {missions = this.filterMissions(missions)}
+    let all_missions_total_payload_kg = 0;
     missions.forEach((mission) => {
       let {payload_total, mission_nationalities} = this.getPayloadData(mission);
+      all_missions_total_payload_kg = all_missions_total_payload_kg + payload_total;
       mission.payload_total = payload_total;
       mission.nationalities = mission_nationalities;
     });
+    let donutChartData = this.donutChartData(missions, all_missions_total_payload_kg);
   return (
-      <>
+      <div>
+      {/* TODO styling */}
+      {/* TODO table, select, and chart each get their own files? */}
         <h3>Total Payload Per Mission</h3>
         <select onChange={(e) => this.changeFilterBy("nationality", e)}>
           {Array.from(this.state.all_nationalities).map((v) => 
             <option value={v} key={v}>{v}</option>
           )}
         </select>
-        <PayloadTable missions={missions} filterBy={this.state.filterBy}/>
-      </>
+        <DonutChart data={donutChartData}/>
+        <PayloadTable missions={missions}/>
+      </div>
     )
   }
 };
