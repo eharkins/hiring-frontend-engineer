@@ -18,6 +18,13 @@ export interface PayloadCardProps {
 
 let truncate = (s: string) => s.length < 12 ? s : s.substring(0,10)+" ...";
 
+const legendColorCircle = (color: string) => (
+  <svg width="10px" height="10px" viewBox="0 0 10 10">
+    <circle className="legendColorCircle"
+      cx="5" cy="5" r="1.591549430918954"
+      fill={color} stroke={color} strokeWidth="3"/>
+  </svg>)
+
 interface PayloadTableProps {
   missions: MissionArray,
   colorArray: string[]
@@ -54,11 +61,7 @@ class PayloadTable extends React.Component<PayloadTableProps, PayloadTableState>
   missionRow = (mission: Mission, color: string) => (
     <tr key={mission.id+"_row"}>
       <td key={mission.id+"_name"}>
-        <svg width="10px" height="10px" viewBox="0 0 10 10">
-          <circle className="legendColorCircle"
-          cx="5" cy="5" r="1.591549430918954"
-          fill={color} stroke={color} strokeWidth="3"/>
-        </svg>
+        {legendColorCircle(color)}
         {truncate(mission.name)}</td>
       <td key={mission.id+"_payload"}>{mission.payload_total} KG</td>
     </tr>
@@ -115,23 +118,23 @@ class PayloadTable extends React.Component<PayloadTableProps, PayloadTableState>
 };
 
 interface DonutChartProps {
-  data: {label: string, value: number}[]
+  data: {label: string, value: number, percentage: number}[]
   colorArray: string[]
 }
 
 const DonutChart: React.FC<DonutChartProps> = (props: DonutChartProps) => {
   // TODO Tooltip
-  const segements = (data: {label: string, value: number}[]) => {
+  const segements = (data: {label: string, value: number, percentage: number}[]) => {
     let offset = 0;
     return data.map((d, i) => {
-      let strokeDasharray = `${d.value} ${100-d.value}`
+      let strokeDasharray = `${d.percentage} ${100-d.percentage}`
       let segment = (
         <circle className="donut-segment" key={d.label}
         cx="50" cy="50" r="15.91549430918954"
         fill="transparent" stroke={props.colorArray[i]} strokeWidth="3"
         strokeDasharray={strokeDasharray} strokeDashoffset={`${100-offset}`}/>
       )
-      offset = offset + d.value
+      offset = offset + d.percentage
       return segment;
     }
     );
@@ -181,7 +184,8 @@ class PayloadCard extends React.Component<PayloadCardProps> {
     return missions.map((mission) => {
       return {
         label: mission.name,
-        value: (mission.payload_total || 0)/all_missions_total_payload_kg*100
+        value: mission.payload_total || 0,
+        percentage: (mission.payload_total || 0)/all_missions_total_payload_kg*100
       }
     });
   }
