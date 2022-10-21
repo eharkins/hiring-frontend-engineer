@@ -1,5 +1,6 @@
 import React from 'react';
-import ReactTooltip from 'react-tooltip';
+import PayloadTable from "./PayloadTable";
+import DonutChart, {getDonutChartData} from "./DonutChart";
 
 interface Payload {
   id: string; payload_mass_kg: (number | null); nationality: string
@@ -7,167 +8,15 @@ interface Payload {
 
 interface PayloadArray extends Array<(Payload | null)>{}
 
-interface Mission {
+export interface Mission {
   id: string, name: string, payloads: PayloadArray, payload_total?: number, nationalities?: Set<string>, color?:string
 }
 
-interface MissionArray extends Array<Mission>{}
+export interface MissionArray extends Array<Mission>{}
 
 export interface PayloadCardProps {
   data: {missions: MissionArray}
 }
-
-let truncate = (s: string) => s.length < 12 ? s : s.substring(0,10)+" ...";
-
-const legendColorCircle = (color: string) => (
-  <svg width="10px" height="10px" viewBox="0 0 10 10" className="m-1">
-    <circle className="legendColorCircle"
-      cx="5" cy="7" r="1.591549430918954"
-      fill={color} stroke={color} strokeWidth="3"/>
-  </svg>)
-
-interface PayloadTableProps {
-  missions: MissionArray
-}
-
-interface PayloadTableState {
-  sortBy?: string,
-  sortDir?: string
-}
-
-// for the purposes of this exercise i implemented the sorting but in production would not re-invent something that is likely well-solved in a react component library
-class PayloadTable extends React.Component<PayloadTableProps, PayloadTableState> {
-  state: PayloadTableState = {
-    sortBy: undefined,
-    sortDir: undefined
-  };
-
-  updateSort = (sortBy: string) => {
-    let newSortDir;
-    let changingColumn = sortBy !== this.state.sortBy;
-    if (changingColumn) {
-      newSortDir = "asc";
-    } else {
-      if (this.state.sortDir === "asc") newSortDir = "des";
-      if (this.state.sortDir === "des") newSortDir = undefined;
-      if (this.state.sortDir === undefined) newSortDir = "asc";
-    }
-    this.setState({
-      sortBy,
-      sortDir: newSortDir
-    })
-  };
-
-  missionRow = (mission: Mission, color: string) => (
-    <tr key={mission.id+"_row"} className="border-b-2">
-      <td key={mission.id+"_name"} className="p-3">
-        <span className='inline-flex'>
-        {legendColorCircle(color)}
-        {truncate(mission.name)}
-        </span>
-      </td>
-      <td key={mission.id+"_payload"}>{mission.payload_total} KG</td>
-    </tr>
-  );
-
-  sortCompare = (a: Mission, b: Mission) => {
-    // this doesn't scale well to new columns and is redundant but i cant easily figure out how in typescript to index the Mission
-    // interface using a variable like sortBy to get the values we are sorting by, hence all these conditionals. :(
-    let sortBy = this.state.sortBy;
-    if (!a.payload_total || !b.payload_total) return 0;
-    if (sortBy === "payload_total") {
-      return this.state.sortDir === "asc" ? a.payload_total - b.payload_total : b.payload_total - a.payload_total;
-    }
-    if (this.state.sortBy === "name") {
-      let res = a.name.localeCompare(b.name);
-      if (this.state.sortDir === "des") res = -1*res; 
-      return res;
-    }
-    return 0;
-  };
-
-  sortIcon = (columnName: string) => {
-    if (columnName !== this.state.sortBy) return;
-    switch(this.state.sortDir) {
-      case "asc":
-        return (<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-                  <path fillRule="evenodd" d="M10 3a.75.75 0 01.75.75v10.638l3.96-4.158a.75.75 0 111.08 1.04l-5.25 5.5a.75.75 0 01-1.08 0l-5.25-5.5a.75.75 0 111.08-1.04l3.96 4.158V3.75A.75.75 0 0110 3z" clipRule="evenodd" />
-                </svg>);
-      case "des":
-        return (<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-                  <path fillRule="evenodd" d="M10 17a.75.75 0 01-.75-.75V5.612L5.29 9.77a.75.75 0 01-1.08-1.04l5.25-5.5a.75.75 0 011.08 0l5.25 5.5a.75.75 0 11-1.08 1.04l-3.96-4.158V16.25A.75.75 0 0110 17z" clipRule="evenodd" />
-                </svg>);
-      default:
-        return;
-    }
-  }
-
-  render() {
-    let { missions } = this.props;
-    // make a copy of the array with spread syntax so it goes back to original order when not sorted
-    missions = this.state.sortDir ? [...missions].sort(this.sortCompare): missions;
-    return (<table>
-      <thead>
-        <tr className="text-left">
-          <th onClick={() => this.updateSort("name")}>
-            <span className="inline-flex">
-              <h3>MISSION</h3>{this.sortIcon("name")}
-            </span>
-          </th>
-          <th onClick={() => this.updateSort("payload_total")}>
-            <span className="inline-flex">
-              <h3>TOTAL PAYLOAD MASS</h3>{this.sortIcon("payload_total")}
-            </span>
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        {missions.map((mission, i) => this.missionRow(mission, mission.color || ''))}
-      </tbody>
-    </table>);
-  };
-};
-
-interface DonutChartProps {
-  data: {label: string, value: number, percentage: number, color?: string}[]
-}
-
-const DonutChart: React.FC<DonutChartProps> = (props: DonutChartProps) => {
-  const segements = (data: {label: string, value: number, percentage: number, color?: string}[]) => {
-    let offset = 0;
-    return data.map((d, i) => {
-      let strokeDasharray = `${d.percentage} ${100-d.percentage}`
-      let segment = (
-          <circle className="donut-segment" key={d.label}
-          data-tip data-for={d.label}          
-          cx="35" cy="35" r="15.91549430918954"
-          fill="transparent" stroke={d.color} strokeWidth="3"
-          strokeDasharray={strokeDasharray} strokeDashoffset={`${100-offset}`}
-          />
-      )
-      offset = offset + d.percentage
-      return segment;
-    }
-    );
-  }
-
-  const segmentTooltip = (d: {label: string, value: number, percentage: number}, color?: string) => {
-    return <ReactTooltip id={d.label}>
-      <span>
-        {legendColorCircle(color || '')}
-        {`${d.label} ${d.value} KG`}
-      </span>
-    </ReactTooltip>
-  }
-
-  return <>
-    <svg width="35vw" height="auto" viewBox="0 0 85 85" className="donut">
-      {segements(props.data)}
-    </svg>
-    {/* Tooltip for each segment must be mounted outside svg tag */}
-    {props.data.map((d, i) => segmentTooltip(d, d.color))}
-  </>;
-};
 
 interface PayloadCardState {
   filterBy: {key: string, value: string}
@@ -201,17 +50,6 @@ class PayloadCard extends React.Component<PayloadCardProps> {
   changeFilterBy(filterByKey: string, event: React.ChangeEvent<HTMLSelectElement>) {
     this.setState(Object.assign({...this.state}, {filterBy: {key: filterByKey, value: event.target.value}}));
   }
-  
-  donutChartData = (missions: MissionArray, all_missions_total_payload_kg: number) => {
-    return missions.map((mission) => {
-      return {
-        label: mission.name,
-        value: mission.payload_total || 0,
-        percentage: (mission.payload_total || 0)/all_missions_total_payload_kg*100,
-        color: mission.color
-      }
-    });
-  }
 
   render() {
     const colors = ['#f44336', '#e91e63', '#9c27b0', '#673ab7', '#3f51b5', '#2196f3', '#03a9f4', '#00bcd4', '#009688', '#4caf50', '#8bc34a', '#cddc39', '#ffeb3b', '#ffc107', '#ff9800', '#ff5722', '#795548', '#607d8b' ];
@@ -225,10 +63,9 @@ class PayloadCard extends React.Component<PayloadCardProps> {
       mission.nationalities = mission_nationalities;
       mission.color = colors[i];
     });
-    let donutChartData = this.donutChartData(missions, all_missions_total_payload_kg);
+    let donutChartData = getDonutChartData(missions, all_missions_total_payload_kg);
   return (
       <div className="w-4/5">
-      {/* TODO table, select, and chart each get their own files? */}
         <div className="w-full p-2 inline-flex justify-between border-2 rounded-md drop-shadow-sm">
           <h2 className="p-3 text-xl font-bold">Total Payload Per Mission</h2>
           <select className="p-3 rounded-md text-blue-400 drop-shadow-sm" onChange={(e) => this.changeFilterBy("nationality", e)}>
