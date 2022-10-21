@@ -8,7 +8,7 @@ interface Payload {
 interface PayloadArray extends Array<(Payload | null)>{}
 
 interface Mission {
-  id: string, name: string, payloads: PayloadArray, payload_total?: number, nationalities?: Set<string>
+  id: string, name: string, payloads: PayloadArray, payload_total?: number, nationalities?: Set<string>, color?:string
 }
 
 interface MissionArray extends Array<Mission>{}
@@ -20,15 +20,14 @@ export interface PayloadCardProps {
 let truncate = (s: string) => s.length < 12 ? s : s.substring(0,10)+" ...";
 
 const legendColorCircle = (color: string) => (
-  <svg width="10px" height="10px" viewBox="0 0 10 10">
+  <svg width="10px" height="10px" viewBox="0 0 10 10" className="m-1">
     <circle className="legendColorCircle"
-      cx="5" cy="5" r="1.591549430918954"
+      cx="5" cy="7" r="1.591549430918954"
       fill={color} stroke={color} strokeWidth="3"/>
   </svg>)
 
 interface PayloadTableProps {
-  missions: MissionArray,
-  colorArray: string[]
+  missions: MissionArray
 }
 
 interface PayloadTableState {
@@ -60,12 +59,14 @@ class PayloadTable extends React.Component<PayloadTableProps, PayloadTableState>
   };
 
   missionRow = (mission: Mission, color: string) => (
-    <tr key={mission.id+"_row"}>
-      <td key={mission.id+"_name"} data-tip data-for={mission.id+"_name"}>
+    <tr key={mission.id+"_row"} className="border-b-2">
+      <td key={mission.id+"_name"} className="p-3">
+        <span className='inline-flex'>
         {legendColorCircle(color)}
-        {truncate(mission.name)}</td>
+        {truncate(mission.name)}
+        </span>
+      </td>
       <td key={mission.id+"_payload"}>{mission.payload_total} KG</td>
-      <ReactTooltip id={mission.id+"_name"}><span>test</span></ReactTooltip>
     </tr>
   );
 
@@ -107,34 +108,40 @@ class PayloadTable extends React.Component<PayloadTableProps, PayloadTableState>
     missions = this.state.sortDir ? [...missions].sort(this.sortCompare): missions;
     return (<table>
       <thead>
-        <tr>
-          <th onClick={() => this.updateSort("name")}>MISSION {this.sortIcon("name")}</th>
-          <th onClick={() => this.updateSort("payload_total")}>TOTAL PAYLOAD MASS {this.sortIcon("payload_total")}</th>
+        <tr className="text-left">
+          <th onClick={() => this.updateSort("name")}>
+            <span className="inline-flex">
+              <h3>MISSION</h3>{this.sortIcon("name")}
+            </span>
+          </th>
+          <th onClick={() => this.updateSort("payload_total")}>
+            <span className="inline-flex">
+              <h3>TOTAL PAYLOAD MASS</h3>{this.sortIcon("payload_total")}
+            </span>
+          </th>
         </tr>
       </thead>
       <tbody>
-        {missions.map((mission, i) => this.missionRow(mission, this.props.colorArray[i]))}
+        {missions.map((mission, i) => this.missionRow(mission, mission.color || ''))}
       </tbody>
     </table>);
   };
 };
 
 interface DonutChartProps {
-  data: {label: string, value: number, percentage: number}[]
-  colorArray: string[]
+  data: {label: string, value: number, percentage: number, color?: string}[]
 }
 
 const DonutChart: React.FC<DonutChartProps> = (props: DonutChartProps) => {
-  // TODO Tooltip
-  const segements = (data: {label: string, value: number, percentage: number}[]) => {
+  const segements = (data: {label: string, value: number, percentage: number, color?: string}[]) => {
     let offset = 0;
     return data.map((d, i) => {
       let strokeDasharray = `${d.percentage} ${100-d.percentage}`
       let segment = (
           <circle className="donut-segment" key={d.label}
           data-tip data-for={d.label}          
-          cx="50" cy="50" r="15.91549430918954"
-          fill="transparent" stroke={props.colorArray[i]} strokeWidth="1"
+          cx="35" cy="35" r="15.91549430918954"
+          fill="transparent" stroke={d.color} strokeWidth="3"
           strokeDasharray={strokeDasharray} strokeDashoffset={`${100-offset}`}
           />
       )
@@ -144,21 +151,21 @@ const DonutChart: React.FC<DonutChartProps> = (props: DonutChartProps) => {
     );
   }
 
-  const segmentTooltip = (d: {label: string, value: number, percentage: number}, color: string) => {
+  const segmentTooltip = (d: {label: string, value: number, percentage: number}, color?: string) => {
     return <ReactTooltip id={d.label}>
       <span>
-        {legendColorCircle(color)}
+        {legendColorCircle(color || '')}
         {`${d.label} ${d.value} KG`}
       </span>
     </ReactTooltip>
   }
 
   return <>
-    <svg width="75%" height="75%" viewBox="0 0 100 100" className="donut">
+    <svg width="35vw" height="auto" viewBox="0 0 85 85" className="donut">
       {segements(props.data)}
     </svg>
     {/* Tooltip for each segment must be mounted outside svg tag */}
-    {props.data.map((d, i) => segmentTooltip(d, props.colorArray[i]))}
+    {props.data.map((d, i) => segmentTooltip(d, d.color))}
   </>;
 };
 
@@ -200,7 +207,8 @@ class PayloadCard extends React.Component<PayloadCardProps> {
       return {
         label: mission.name,
         value: mission.payload_total || 0,
-        percentage: (mission.payload_total || 0)/all_missions_total_payload_kg*100
+        percentage: (mission.payload_total || 0)/all_missions_total_payload_kg*100,
+        color: mission.color
       }
     });
   }
@@ -210,25 +218,29 @@ class PayloadCard extends React.Component<PayloadCardProps> {
     let { missions }  = this.props.data
     if(this.state.filterBy) {missions = this.filterMissions(missions)}
     let all_missions_total_payload_kg = 0;
-    missions.forEach((mission) => {
+    missions.forEach((mission, i) => {
       let {payload_total, mission_nationalities} = this.getPayloadData(mission);
       all_missions_total_payload_kg = all_missions_total_payload_kg + payload_total;
       mission.payload_total = payload_total;
       mission.nationalities = mission_nationalities;
+      mission.color = colors[i];
     });
     let donutChartData = this.donutChartData(missions, all_missions_total_payload_kg);
   return (
-      <div>
-      {/* TODO styling */}
+      <div className="w-4/5">
       {/* TODO table, select, and chart each get their own files? */}
-        <h3>Total Payload Per Mission</h3>
-        <select onChange={(e) => this.changeFilterBy("nationality", e)}>
-          {Array.from(this.state.all_nationalities).map((v) => 
-            <option value={v} key={v}>{v}</option>
-          )}
-        </select>
-        <DonutChart data={donutChartData} colorArray={colors}/>
-        <PayloadTable missions={missions} colorArray={colors}/>
+        <div className="w-full p-2 inline-flex justify-between border-2 rounded-md drop-shadow-sm">
+          <h2 className="p-3 text-xl font-bold">Total Payload Per Mission</h2>
+          <select className="p-3 rounded-md text-blue-400 drop-shadow-sm" onChange={(e) => this.changeFilterBy("nationality", e)}>
+            {Array.from(this.state.all_nationalities).map((v) => 
+              <option value={v} key={v}>{v}</option>
+            )}
+          </select>
+        </div>
+        <div className="w-full p-5 flex flex-wrap justify-around border-2 rounded-md drop-shadow-sm">
+          <DonutChart data={donutChartData}/>
+          <PayloadTable missions={missions}/>
+        </div>
       </div>
     )
   }
