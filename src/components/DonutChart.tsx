@@ -21,14 +21,19 @@ export const getDonutChartData = (missions: MissionArray, all_missions_total_pay
 const DonutChart: React.FC<DonutChartProps> = (props: DonutChartProps) => {
   const segements = (data: {label: string, value: number, percentage: number, color?: string}[]) => {
     let offset = 0;
+    let roundedLineFactor = data.length > 1 ? 3 : 0
+    let circumference = 100+(roundedLineFactor*data.length)
+    let r = (circumference)/(2*Math.PI)
     return data.map((d, i) => {
-      let strokeDasharray = `${d.percentage} ${100-d.percentage}`
+      let strokeDasharray = `${d.percentage} ${circumference-d.percentage}`
+      let strokeDashOffset = circumference -offset -roundedLineFactor*i
       let segment = (
           <circle className="donut-segment" key={d.label}
           data-tip data-for={d.label}          
-          cx="35" cy="35" r="15.91549430918954"
-          fill="transparent" stroke={d.color} strokeWidth="3"
-          strokeDasharray={strokeDasharray} strokeDashoffset={`${100-offset}`}
+          cx="30" cy="35" r={`${r}`}
+          fill="transparent" stroke={d.color} strokeWidth="2"
+          strokeLinecap="round"
+          strokeDasharray={strokeDasharray} strokeDashoffset={`${strokeDashOffset}`}
           />
       )
       offset = offset + d.percentage
@@ -46,8 +51,15 @@ const DonutChart: React.FC<DonutChartProps> = (props: DonutChartProps) => {
     </ReactTooltip>
   }
 
+  // I would use a different approach for the donut chart in the future
+  // for the following reason: 
+  // react-tooltip doesnt play very well with svg donut chart
+  // because the box for each segment in the DOM is larger
+  // than the segment appears so when you hover outside
+  // the segment you still get a tooltip and it also causes
+  // overlapping between segment toolitp areas.
   return <>
-    <svg width="35vw" height="100%" viewBox="0 0 85 85" className="donut">
+    <svg width="35vw" height="100%" viewBox="0 0 80 70" className="donut">
       {segements(props.data)}
     </svg>
     {/* Tooltip for each segment must be mounted outside svg tag */}
