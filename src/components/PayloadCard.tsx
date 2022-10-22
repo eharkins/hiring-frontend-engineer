@@ -67,7 +67,7 @@ class PayloadCard extends React.Component<PayloadCardProps> {
   return (
       <div className="w-4/5">
         <div className="w-full p-2 inline-flex justify-between border-2 rounded-md drop-shadow-sm">
-          <h2 className="p-3 text-xl font-bold">Total Payload Per Mission</h2>
+          <h2 className="p-3 text-2xl font-bold">Total Payload Per Mission</h2>
           <select className="p-3 rounded-md text-blue-400 drop-shadow-sm" onChange={(e) => this.changeFilterBy("nationality", e)}>
             {Array.from(this.state.all_nationalities).map((v) => 
               <option value={v} key={v}>{v}</option>

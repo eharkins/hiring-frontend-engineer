@@ -38,7 +38,7 @@ const DonutChart: React.FC<DonutChartProps> = (props: DonutChartProps) => {
   }
 
   const segmentTooltip = (d: {label: string, value: number, percentage: number}, color?: string) => {
-    return <ReactTooltip id={d.label}>
+    return <ReactTooltip id={d.label} key={`${d.label}-segment-tooltip`}>
       <span>
         {legendColorCircle(color || '')}
         {`${d.label} ${d.value} KG`}
@@ -47,11 +47,11 @@ const DonutChart: React.FC<DonutChartProps> = (props: DonutChartProps) => {
   }
 
   return <>
-    <svg width="35vw" height="auto" viewBox="0 0 85 85" className="donut">
+    <svg width="35vw" height="100%" viewBox="0 0 85 85" className="donut">
       {segements(props.data)}
     </svg>
     {/* Tooltip for each segment must be mounted outside svg tag */}
-    {props.data.map((d, i) => segmentTooltip(d, d.color))}
+    {props.data.map((d) => segmentTooltip(d, d.color))}
   </>;
 };
 

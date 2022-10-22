@@ -1,8 +1,6 @@
 import React from 'react';
 import {Mission, MissionArray} from './PayloadCard';
 
-let truncate = (s: string) => s.length < 10 ? s : s.substring(0,10)+" ...";
-
 export const legendColorCircle = (color: string) => (
   <svg width="10px" height="10px" viewBox="0 0 10 10" className="m-1">
     <circle className="legendColorCircle"
@@ -43,11 +41,11 @@ export default class PayloadTable extends React.Component<PayloadTableProps, Pay
   };
 
   missionRow = (mission: Mission, color: string) => (
-    <tr key={mission.id+"_row"} className="border-b-2">
-      <td key={mission.id+"_name"} className="p-3">
-        <span className='inline-flex'>
+    <tr key={mission.id+"_row"} className="border-b-2 w-5/6">
+      <td key={mission.id+"_name"} className="p-3 ">
+        <span className='inline-flex w-5/6'>
         {legendColorCircle(color)}
-        {truncate(mission.name)}
+        <p className="truncate">{mission.name}</p>
         </span>
       </td>
       <td key={mission.id+"_payload"}>{mission.payload_total} KG</td>
@@ -90,24 +88,28 @@ export default class PayloadTable extends React.Component<PayloadTableProps, Pay
     let { missions } = this.props;
     // make a copy of the array with spread syntax so it goes back to original order when not sorted
     missions = this.state.sortDir ? [...missions].sort(this.sortCompare): missions;
-    return (<table>
-      <thead>
-        <tr className="text-left">
-          <th onClick={() => this.updateSort("name")}>
-            <span className="inline-flex">
-              <h3>MISSION</h3>{this.sortIcon("name")}
-            </span>
-          </th>
-          <th onClick={() => this.updateSort("payload_total")}>
-            <span className="inline-flex">
-              <h3>TOTAL PAYLOAD MASS</h3>{this.sortIcon("payload_total")}
-            </span>
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        {missions.map((mission, i) => this.missionRow(mission, mission.color || ''))}
-      </tbody>
-    </table>);
+    return (
+      <div className="overflow-y-scroll  max-h-96">
+        <table className="w-auto">
+        <thead className='sticky top-0 bg-white rounded-md'>
+          <tr className="text-left">
+            <th onClick={() => this.updateSort("name")}>
+              <span className="inline-flex p-6">
+                <h3>MISSION</h3>{this.sortIcon("name")}
+              </span>
+            </th>
+            <th onClick={() => this.updateSort("payload_total")}>
+              <span className="inline-flex pr-5">
+                <h3>TOTAL PAYLOAD MASS</h3>{this.sortIcon("payload_total")}
+              </span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {missions.map((mission, i) => this.missionRow(mission, mission.color || ''))}
+        </tbody>
+      </table>
+    </div>
+    );
   };
 };
